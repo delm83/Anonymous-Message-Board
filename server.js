@@ -3,7 +3,7 @@ require('dotenv').config();
 const express     = require('express');
 const bodyParser  = require('body-parser');
 const cors        = require('cors');
-
+const helmet      = require('helmet');
 const apiRoutes         = require('./routes/api.js');
 const fccTestingRoutes  = require('./routes/fcctesting.js');
 const runner            = require('./test-runner');
@@ -16,6 +16,12 @@ app.use(cors({origin: '*'})); //For FCC testing purposes only
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+//Only allow my site to be loaded in an iFrame on my own pages
+app.use(helmet.frameguard({action: 'sameorigin'}))
+//Do not allow DNS prefetching
+app.use(helmet.dnsPrefetchControl())
+//Only allow my site to send the referrer for my own pages
+app.use(helmet.referrerPolicy({ policy: 'same-origin' }));
 
 //Sample front-end
 app.route('/b/:board/')
