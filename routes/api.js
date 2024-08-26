@@ -47,14 +47,23 @@ module.exports = function (app) {
     let board = req.params.board;
     let Thread = mongoose.model(board, threadSchema);
     let thread_list = await Thread.find().select({__v: 0, reported: 0, delete_password: 0}).sort({ bumped_on: -1 }).limit(10);
-    console.log(thread_list);
     for(let x=0; x<thread_list.length; x++){
       thread_list[x].replies = thread_list[x].replies.slice(-3);
-      console.log(thread_list[x]);
     }
     return res.json(thread_list);
  }catch(err){return res.json({error: err})}
- });
+ }).delete(async (req, res)=>{
+  try{
+   let board = req.params.board;
+   let Thread = mongoose.model(board, threadSchema);
+   let thread_id = req.body.thread_id;
+   let delete_password = req.body.delete_password;
+   let deleted_post = await Thread.deleteOne({ _id: thread_id, delete_password: delete_password });
+   return deleted_post.deletedCount==0?
+   res.type('txt').send('incorrect password')
+  :res.type('txt').send('success');
+}catch(err){return res.json({error: err})}
+});
     
   app.route('/api/replies/:board').post(async (req, res)=>{
     try{
