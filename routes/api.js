@@ -49,6 +49,8 @@ module.exports = function (app) {
     let thread_list = await Thread.find().select({__v: 0, reported: 0, delete_password: 0}).sort({ bumped_on: -1 }).limit(10);
     for(let x=0; x<thread_list.length; x++){
       thread_list[x].replies = thread_list[x].replies.slice(-3);
+      for(let y=0; y<thread_list[x].replies.length; y++)
+        thread_list[x].replies[y] = {"_id": thread_list[x].replies[y]._id, "text": thread_list[x].replies[y].text, "created_on": thread_list[x].replies[y].created_on}
     }
     return res.json(thread_list);
  }catch(err){return res.json({error: err})}
