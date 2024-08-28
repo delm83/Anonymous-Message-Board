@@ -7,7 +7,7 @@ module.exports = function (app) {
   
   let Schema = mongoose.Schema;
 
-  let threadSchema = new Schema({
+  let postSchema = new Schema({
     text: {
       type: String,
       required: true,
@@ -30,7 +30,7 @@ module.exports = function (app) {
  .post(async (req, res)=>{
    try{
      let board = req.params.board;
-     let Thread = mongoose.model(board, threadSchema);
+     let Thread = mongoose.model(board, postSchema);
      let text = req.body.text
      let delete_password = req.body.delete_password
      let inputThread = new Thread({
@@ -45,15 +45,13 @@ module.exports = function (app) {
  }).get(async (req, res)=>{
    try{
     let board = req.params.board;
-    let Thread = mongoose.model(board, threadSchema);
+    let Thread = mongoose.model(board, postSchema);
     let thread_list = await Thread.find().select({__v: 0, reported: 0, delete_password: 0}).sort({ bumped_on: -1 }).limit(10);
     let output = thread_list.map(thread=> 
     { return {
       "_id": thread._id, "text": thread.text, "created_on": thread.created_on, "bumped_on": thread.bumped_on, "replies": thread.replies.slice(-3).map(reply =>{
         return {
-          _id: reply._id,
-          text: reply.text,
-          created_on: reply.created_on,
+          "_id": reply._id, "text": reply.text, "created_on": reply.created_on,
         }
       })
     }
@@ -63,7 +61,7 @@ module.exports = function (app) {
  }).delete(async (req, res)=>{
   try{
    let board = req.params.board;
-   let Thread = mongoose.model(board, threadSchema);
+   let Thread = mongoose.model(board, postSchema);
    let thread_id = req.body.thread_id;
    let delete_password = req.body.delete_password;
    let deleted_post = await Thread.deleteOne({ _id: thread_id, delete_password: delete_password });
@@ -76,12 +74,12 @@ module.exports = function (app) {
   app.route('/api/replies/:board').post(async (req, res)=>{
     try{
       let board = req.params.board;
-      let Thread = mongoose.model(board, threadSchema);
+      let Reply = mongoose.model(board, postSchema);
       let thread_id = req.body.thread_id;
       let text = req.body.text
       let delete_password = req.body.delete_password
-      let input_thread = await Thread.findById(thread_id);
-      let inputReply = new Thread({
+      let input_thread = await Reply.findById(thread_id);
+      let inputReply = new Reply({
        text: text,
        delete_password: delete_password,
        created_on: new Date(),
@@ -94,7 +92,7 @@ module.exports = function (app) {
   }).get(async (req, res)=>{
     try{
      let board = req.params.board;
-     let Thread = mongoose.model(board, threadSchema);
+     let Thread = mongoose.model(board, postSchema);
      let thread_id = req.query.thread_id;
      let input_thread = await Thread.findById(thread_id).select({__v: 0, reported: 0, delete_password: 0});
      let output = {
@@ -104,13 +102,29 @@ module.exports = function (app) {
       bumped_on: input_thread.bumped_on,
       replies: input_thread.replies.map(reply => {
         return {
-          _id: reply._id,
-          text: reply.text,
-          created_on: reply.created_on,
+          "_id": reply._id, "text": reply.text, "created_on": reply.created_on,
         }
       })
     }
      return res.json(output);
+  }catch(err){return res.json({error: err})}
+  }).delete(async (req, res)=>{
+    try{
+     let board = req.params.board;
+     let Reply = mongoose.model(board, postSchema);
+     let thread_id = req.body.thread_id;
+     let reply_id = req.body.reply_id
+     let delete_password = req.body.delete_password;
+     let deleted_post = await Reply.findById(thread_id);
+    for(let reply of deleted_post.replies){
+      if(reply._id == reply_id && reply.delete_password==delete_password){
+        reply.text = '[deleted]';
+        deleted_post.markModified('replies');
+          await deleted_post.save();
+          return res.type('txt').send('success');
+      }
+     }
+     return res.type('txt').send('incorrect password')
   }catch(err){return res.json({error: err})}
   });
 };
