@@ -47,12 +47,18 @@ module.exports = function (app) {
     let board = req.params.board;
     let Thread = mongoose.model(board, threadSchema);
     let thread_list = await Thread.find().select({__v: 0, reported: 0, delete_password: 0}).sort({ bumped_on: -1 }).limit(10);
-    for(let x=0; x<thread_list.length; x++){
-      thread_list[x].replies = thread_list[x].replies.slice(-3);
-      for(let y=0; y<thread_list[x].replies.length; y++)
-        thread_list[x].replies[y] = {"_id": thread_list[x].replies[y]._id, "text": thread_list[x].replies[y].text, "created_on": thread_list[x].replies[y].created_on}
+    let output = thread_list.map(thread=> 
+    { return {
+      "_id": thread._id, "text": thread.text, "created_on": thread.created_on, "bumped_on": thread.bumped_on, "replies": thread.replies.slice(-3).map(reply =>{
+        return {
+          _id: reply._id,
+          text: reply.text,
+          created_on: reply.created_on,
+        }
+      })
     }
-    return res.json(thread_list);
+    })
+    return res.json(output);
  }catch(err){return res.json({error: err})}
  }).delete(async (req, res)=>{
   try{
@@ -81,7 +87,7 @@ module.exports = function (app) {
        created_on: new Date(),
  });
    input_thread.bumped_on = new Date();
-   input_thread.replies.push({"_id": inputReply._id, "text": inputReply.text, "created_on": inputReply.created_on});
+   input_thread.replies.push(inputReply);
    await input_thread.save();
    return res.redirect('/b/'+board+'/'+thread_id);
   }catch(err){return res.json({error: err})}
@@ -91,7 +97,20 @@ module.exports = function (app) {
      let Thread = mongoose.model(board, threadSchema);
      let thread_id = req.query.thread_id;
      let input_thread = await Thread.findById(thread_id).select({__v: 0, reported: 0, delete_password: 0});
-     return res.json(input_thread);
+     let output = {
+      _id: input_thread._id,
+      text: input_thread.text,
+      created_on: input_thread.created_on,
+      bumped_on: input_thread.bumped_on,
+      replies: input_thread.replies.map(reply => {
+        return {
+          _id: reply._id,
+          text: reply.text,
+          created_on: reply.created_on,
+        }
+      })
+    }
+     return res.json(output);
   }catch(err){return res.json({error: err})}
   });
 };
