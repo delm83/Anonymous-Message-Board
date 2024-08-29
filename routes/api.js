@@ -137,11 +137,11 @@ module.exports = function (app) {
   }).delete(async (req, res)=>{
     try{
      let board = req.params.board;
-     let Post = mongoose.model(board, postSchema);
+     let Thread = mongoose.model(board, postSchema);
      let thread_id = req.body.thread_id;
      let reply_id = req.body.reply_id
      let delete_password = req.body.delete_password;
-     let deleted_post_thread = await Post.findById(thread_id);
+     let deleted_post_thread = await Thread.findById(thread_id);
     for(let reply of deleted_post_thread.replies){
       if(reply._id == reply_id && reply.delete_password==delete_password){
         reply.text = '[deleted]';
