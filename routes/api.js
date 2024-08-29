@@ -58,14 +58,24 @@ module.exports = function (app) {
     })
     return res.json(output);
  }catch(err){return res.json({error: err})}
- }).delete(async (req, res)=>{
+ }).put(async (req, res)=>{
+  try{
+   let board = req.params.board;
+   let Thread = mongoose.model(board, postSchema);
+   let thread_id = req.body.thread_id;
+   let input_thread = await Thread.findById(thread_id);
+   input_thread.reported = true;
+   await input_thread.save();
+   return res.type('txt').send('reported');
+}catch(err){return res.json({error: err})}
+}).delete(async (req, res)=>{
   try{
    let board = req.params.board;
    let Thread = mongoose.model(board, postSchema);
    let thread_id = req.body.thread_id;
    let delete_password = req.body.delete_password;
-   let deleted_post = await Thread.deleteOne({ _id: thread_id, delete_password: delete_password });
-   return deleted_post.deletedCount==0?
+   let deleted_thread = await Thread.deleteOne({ _id: thread_id, delete_password: delete_password });
+   return deleted_thread.deletedCount==0?
    res.type('txt').send('incorrect password')
   :res.type('txt').send('success');
 }catch(err){return res.json({error: err})}
@@ -74,12 +84,12 @@ module.exports = function (app) {
   app.route('/api/replies/:board').post(async (req, res)=>{
     try{
       let board = req.params.board;
-      let Reply = mongoose.model(board, postSchema);
+      let Post = mongoose.model(board, postSchema);
       let thread_id = req.body.thread_id;
       let text = req.body.text
       let delete_password = req.body.delete_password
-      let input_thread = await Reply.findById(thread_id);
-      let inputReply = new Reply({
+      let input_thread = await Post.findById(thread_id);
+      let inputReply = new Post({
        text: text,
        delete_password: delete_password,
        created_on: new Date(),
@@ -108,19 +118,35 @@ module.exports = function (app) {
     }
      return res.json(output);
   }catch(err){return res.json({error: err})}
+  }).put(async (req, res)=>{
+    try{
+     let board = req.params.board;
+     let Thread = mongoose.model(board, postSchema);
+     let thread_id = req.body.thread_id;
+     let reply_id = req.body.reply_id;
+     let input_thread = await Thread.findById(thread_id);
+     for(let reply of input_thread.replies){
+      if(reply._id == reply_id){
+        reply.reported = true;
+        input_thread.markModified('replies');
+          await input_thread.save();
+          return res.type('txt').send('reported');
+      }
+     }
+  }catch(err){return res.json({error: err})}
   }).delete(async (req, res)=>{
     try{
      let board = req.params.board;
-     let Reply = mongoose.model(board, postSchema);
+     let Post = mongoose.model(board, postSchema);
      let thread_id = req.body.thread_id;
      let reply_id = req.body.reply_id
      let delete_password = req.body.delete_password;
-     let deleted_post = await Reply.findById(thread_id);
-    for(let reply of deleted_post.replies){
+     let deleted_post_thread = await Post.findById(thread_id);
+    for(let reply of deleted_post_thread.replies){
       if(reply._id == reply_id && reply.delete_password==delete_password){
         reply.text = '[deleted]';
-        deleted_post.markModified('replies');
-          await deleted_post.save();
+        deleted_post_thread.markModified('replies');
+          await deleted_post_thread.save();
           return res.type('txt').send('success');
       }
      }
